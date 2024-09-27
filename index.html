@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">    
+    <title>Vocabularies</title>
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            padding: 8px;
+        }
+        th {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+  
+  <h2>Vocabulary List</h2>
+  <div>
+    <button onclick="downloadJSON()">Download JSON</button>
+    <input type="file" id="uploadJSON" accept=".json" onchange="uploadJSON()">
+  </div>
+  <table id="wordTable">
+    <thead>
+      <tr>
+        <th onclick="sortTable(0)">English</th>
+        <th onclick="sortTable(1)">Chinese</th>
+        <th onclick="sortTable(2)">Part Of Speech</th>
+        <th onclick="sortTable(3)">Date</th>
+        <th>Operation</th>
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  </table>
+  
+  <h3>New Vocabulary</h3>
+  <div>
+    <form id="wordForm">
+      <label for="english">English:</label>
+      <input type="text" id="english" name="english" required>
+      
+      <label for="chinese">Chinese:</label>
+      <input type="text" id="chinese" name="chinese" required>
+      
+      <label for="partOfSpeech">Part Of Speech:</label>
+      <select id="partOfSpeech" name="partOfSpeech" required>
+        <option value="n.">n. noun</option>
+        <option value="v.">v. verb</option>
+        <option value="adj.">adj. adjective</option>
+        <option value="adv.">adv. adverb</option>
+        <option value="prep.">prep. preposition</option>
+        <option value="pron.">pron. pronoun</option>
+        <option value="conj.">conj. conjunction</option>
+        <option value="interj.">interj. interjection</option>
+      </select><br><br>
+      
+      <label for="date">Date:</label>
+      <input type="date" id="date" name="date" required><br><br>
+      
+      <button type="button" onclick="addWord()">Add Vocabulary</button>
+    </form>
+  </div>
+  
+  <script>
+    document.getElementById('date').valueAsDate = new Date();
+    
+    function addWord() {
+        const english = document.getElementById('english').value;
+        const chinese = document.getElementById('chinese').value;
+        const partOfSpeech = document.getElementById('partOfSpeech').value;
+        const date = document.getElementById('date').value;
+	
+        if (english && chinese && partOfSpeech && date) {
+            const table = document.getElementById('wordTable').getElementsByTagName('tbody')[0];
+            const newRow = table.insertRow();
+	    
+            const cell1 = newRow.insertCell(0);
+            const cell2 = newRow.insertCell(1);
+            const cell3 = newRow.insertCell(2);
+            const cell4 = newRow.insertCell(3);
+            const cell5 = newRow.insertCell(4);
+	    
+            cell1.textContent = english;
+            cell2.textContent = chinese;
+            cell3.textContent = partOfSpeech;
+            cell4.textContent = date;
+            cell5.innerHTML = '<button onclick="deleteRow(this)">Delete</button>';
+	    
+            newRow.addEventListener('dblclick', editCell);
+	    
+            document.getElementById('wordForm').reset();
+            document.getElementById('date').valueAsDate = new Date();
+        } else {
+            alert('All column required');
+        }
+    }
+    
+    function deleteRow(button) {
+        const row = button.parentNode.parentNode;
+        row.parentNode.removeChild(row);
+    }
+    
+    function editCell(event) {
+        const cell = event.target;
+        const originalContent = cell.textContent;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = originalContent;
+        input.style.width = '100%';
+	
+        input.addEventListener('blur', () => {
+            cell.textContent = input.value;
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                cell.textContent = input.value;
+            }
+        });
+
+        cell.textContent = '';
+        cell.appendChild(input);
+        input.focus();
+    }
+
+    function downloadJSON() {
+        const table = document.getElementById('wordTable').getElementsByTagName('tbody')[0];
+        const rows = table.getElementsByTagName('tr');
+        const data = [];
+
+        for (let i = 0; i < rows.length; i++) {
+            const cells = rows[i].getElementsByTagName('td');
+            const rowData = {
+                english: cells[0].textContent,
+                chinese: cells[1].textContent,
+                partOfSpeech: cells[2].textContent,
+                date: cells[3].textContent
+            };
+            data.push(rowData);
+        }
+
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'words.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function uploadJSON() {
+        const fileInput = document.getElementById('uploadJSON');
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+
+        reader.onload = function(event) {
+            const json = event.target.result;
+            const data = JSON.parse(json);
+            const table = document.getElementById('wordTable').getElementsByTagName('tbody')[0];
+
+            data.forEach(rowData => {
+                const newRow = table.insertRow();
+
+                const cell1 = newRow.insertCell(0);
+                const cell2 = newRow.insertCell(1);
+                const cell3 = newRow.insertCell(2);
+                const cell4 = newRow.insertCell(3);
+                const cell5 = newRow.insertCell(4);
+
+                cell1.textContent = rowData.english;
+                cell2.textContent = rowData.chinese;
+                cell3.textContent = rowData.partOfSpeech;
+                cell4.textContent = rowData.date;
+                cell5.innerHTML = '<button onclick="deleteRow(this)">刪除</button>';
+
+                newRow.addEventListener('dblclick', editCell);
+            });
+        };
+
+        reader.readAsText(file);
+    }
+
+    function sortTable(columnIndex) {
+        const table = document.getElementById('wordTable');
+        const rows = Array.from(table.rows).slice(1);
+        const isAscending = table.getAttribute('data-sort-asc') === 'true';
+        const direction = isAscending ? 1 : -1;
+	
+        rows.sort((rowA, rowB) => {
+            const cellA = rowA.cells[columnIndex].textContent;
+            const cellB = rowB.cells[columnIndex].textContent;
+	    
+            if (cellA < cellB) return -1 * direction;
+            if (cellA > cellB) return 1 * direction;
+            return 0;
+        });
+	
+        rows.forEach(row => table.appendChild(row));
+        table.setAttribute('data-sort-asc', !isAscending);
+    }
+
+    document.querySelectorAll('#wordTable tbody tr').forEach(row => {
+        row.addEventListener('dblclick', editCell);
+    });
+    </script>
+</body>
+</html>
